@@ -1,0 +1,236 @@
+import java.math.BigDecimal;
+import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+public class Main {
+
+    static final String DB_URL = "jdbc:postgresql://localhost:5432/assignment333";
+    static final String USER = "postgres";
+    static final String PASS = "2305";
+
+    public static void main(String[] args) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS)) {
+            if (conn != null) {
+                System.out.println("Database connection successful!");
+
+
+                populateCharities(conn);
+                populateDonors(conn);
+                populateDonations(conn);
+
+
+                viewCharities(conn);
+                viewDonors(conn);
+                viewDonations(conn);
+
+
+                updateCharityDescription(conn, 1, "Updated Description");
+                updateDonorPhoneNumber(conn, 1, "111-111-1111");
+                updateDonationAmount(conn, 1, new BigDecimal("75.00"));
+
+
+                viewCharities(conn);
+                viewDonors(conn);
+                viewDonations(conn);
+
+            }
+        } catch (SQLException | ParseException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ------------------- Methods for Charity -------------------
+    public static void populateCharities(Connection conn) throws SQLException {
+        String sql = "INSERT INTO charity (name, description, address, contact_email, contact_phone, website_url) VALUES (?, ?, ?, ?, ?, ?)";
+        String checkSql = "SELECT COUNT(*) FROM charity WHERE name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            String[][] charities = {
+                    {"Hope Foundation", "Supports children with critical illnesses", "123 Main St, City", "info@hope.org", "555-1234", "www.hope.org"},
+                    {"Green Earth Org", "Focuses on environmental conservation", "456 Oak Ave, City", "green@earth.net", "555-5678", "www.greenearth.net"},
+                    {"Local Food Bank", "Provides meals to families in need", "789 Pine Ln, City", "feed@local.org", "555-9012", "www.localfoodbank.org"},
+                    {"Animal Rescue", "Shelter for abandoned and abused animals", "101 Elm Rd, City", "adopt@animal.net", "555-3456", "www.animalrescue.org"},
+                    {"Education for All", "Provides educational opportunities", "222 Maple Dr, City", "education@all.net", "555-7890", "www.edforall.org"}
+            };
+            for (String[] charity : charities) {
+                checkStmt.setString(1, charity[0]);
+                ResultSet rs = checkStmt.executeQuery();
+                rs.next();
+                int count = rs.getInt(1);
+                if (count == 0) {
+                    pstmt.setString(1, charity[0]);
+                    pstmt.setString(2, charity[1]);
+                    pstmt.setString(3, charity[2]);
+                    pstmt.setString(4, charity[3]);
+                    pstmt.setString(5, charity[4]);
+                    pstmt.setString(6, charity[5]);
+                    pstmt.executeUpdate();
+                    System.out.println("Charity " + charity[0] + " added!");
+                } else {
+                    System.out.println("Charity with name " + charity[0] + " already exists");
+                }
+            }
+            System.out.println("Charities added!");
+        }
+    }
+
+    public static void viewCharities(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM charity";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("\nCharities:");
+            while (rs.next()) {
+                System.out.printf("ID: %d, Name: %s, Description: %s, Address: %s, Contact Email: %s, Contact Phone: %s, Website URL: %s%n",
+                        rs.getInt("charity_id"), rs.getString("name"), rs.getString("description"),
+                        rs.getString("address"), rs.getString("contact_email"), rs.getString("contact_phone"),
+                        rs.getString("website_url"));
+            }
+        }
+    }
+
+
+    public static void updateCharityDescription(Connection conn, int charityId, String description) throws SQLException {
+        String sql = "UPDATE charity SET description = ? WHERE charity_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, description);
+            pstmt.setInt(2, charityId);
+            pstmt.executeUpdate();
+            System.out.println("Charity with ID " + charityId + " description updated successfully!");
+        }
+    }
+
+
+    // ------------------- Methods for Donor -------------------
+    public static void populateDonors(Connection conn) throws SQLException {
+        String sql = "INSERT INTO donor (first_name, last_name, phone_number, email, address) VALUES (?, ?, ?, ?, ?)";
+        String checkSql = "SELECT COUNT(*) FROM donor WHERE email = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            String[][] donors = {
+                    {"John", "Doe", "555-1111", "john.doe@example.com", "100 Main St"},
+                    {"Jane", "Smith", "555-2222", "jane.smith@example.com", "200 Oak Ave"},
+                    {"Peter", "Jones", "555-3333", "peter.jones@example.com", "300 Pine Ln"},
+                    {"Alice", "Brown", "555-4444", "alice.brown@example.com", "400 Elm Rd"},
+                    {"Bob", "Green", "555-5555", "bob.green@example.com", "500 Maple Dr"}
+            };
+            for (String[] donor : donors) {
+                checkStmt.setString(1, donor[3]);
+                ResultSet rs = checkStmt.executeQuery();
+                rs.next();
+                int count = rs.getInt(1);
+                if (count == 0) {
+                    pstmt.setString(1, donor[0]);
+                    pstmt.setString(2, donor[1]);
+                    pstmt.setString(3, donor[2]);
+                    pstmt.setString(4, donor[3]);
+                    pstmt.setString(5, donor[4]);
+                    pstmt.executeUpdate();
+                    System.out.println("Donor " + donor[0] + " " + donor[1] + " added!");
+                } else {
+                    System.out.println("Donor with email " + donor[3] + " already exists");
+                }
+            }
+            System.out.println("Donors added!");
+        }
+    }
+
+    public static void viewDonors(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM donor";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("\nDonors:");
+            while (rs.next()) {
+                System.out.printf("ID: %d, First Name: %s, Last Name: %s, Phone: %s, Email: %s, Address: %s%n",
+                        rs.getInt("donor_id"), rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("phone_number"), rs.getString("email"), rs.getString("address"));
+            }
+        }
+    }
+
+    public static void updateDonorPhoneNumber(Connection conn, int donorId, String phoneNumber) throws SQLException {
+        String sql = "UPDATE donor SET phone_number = ? WHERE donor_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, phoneNumber);
+            pstmt.setInt(2, donorId);
+            pstmt.executeUpdate();
+            System.out.println("Donor with ID " + donorId + " phone number updated successfully!");
+        }
+    }
+
+
+
+    // ------------------- Methods for Donations -------------------
+    public static void populateDonations(Connection conn) throws SQLException, ParseException {
+        String sql = "INSERT INTO donation (donor_id, charity_id, donation_date, amount) VALUES (?, ?, ?, ?)";
+        String checkSql = "SELECT COUNT(*) FROM donation WHERE donor_id = ? AND charity_id = ? AND donation_date = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            String[][] donations = {
+                    {"1", "1", "2023-01-15", "50.00"},
+                    {"2", "2", "2023-02-20", "100.00"},
+                    {"3", "3", "2023-03-25", "75.50"},
+                    {"4", "4", "2023-04-01", "25.00"},
+                    {"5", "5", "2023-05-10", "120.75"},
+                    {"1", "2", "2023-06-15", "60.00"},
+                    {"2", "3", "2023-07-20", "90.00"},
+                    {"3", "4", "2023-08-25", "80.25"},
+                    {"4", "5", "2023-09-01", "30.00"},
+                    {"5", "1", "2023-10-10", "130.50"}
+            };
+            for (String[] donation : donations) {
+                checkStmt.setInt(1, Integer.parseInt(donation[0]));
+                checkStmt.setInt(2, Integer.parseInt(donation[1]));
+                checkStmt.setDate(3, new java.sql.Date(dateFormat.parse(donation[2]).getTime()));
+                ResultSet rs = checkStmt.executeQuery();
+                rs.next();
+                int count = rs.getInt(1);
+                if (count == 0) {
+                    pstmt.setInt(1, Integer.parseInt(donation[0]));
+                    pstmt.setInt(2, Integer.parseInt(donation[1]));
+                    pstmt.setDate(3, new java.sql.Date(dateFormat.parse(donation[2]).getTime()));
+                    pstmt.setBigDecimal(4, new BigDecimal(donation[3]));
+                    pstmt.executeUpdate();
+                    System.out.println("Donation from donor " + donation[0] + " to charity " + donation[1] + " added!");
+                } else {
+                    System.out.println("Donation with donor ID " + donation[0] + ", charity ID " + donation[1] + ", and date " + donation[2] + " already exists");
+                }
+            }
+            System.out.println("Donations added!");
+        }
+    }
+
+    public static void viewDonations(Connection conn) throws SQLException {
+        String sql = "SELECT d.donation_id, do.first_name, do.last_name, c.name AS charity_name, d.donation_date, d.amount " +
+                "FROM donation d " +
+                "INNER JOIN donor do ON d.donor_id = do.donor_id " +
+                "INNER JOIN charity c ON d.charity_id = c.charity_id";
+
+        System.out.println("SQL Query: " + sql);
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("\nDonations:");
+            while (rs.next()) {
+                System.out.printf("ID: %d, Donor: %s %s, Charity: %s, Date: %s, Amount: %s%n",
+                        rs.getInt("donation_id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("charity_name"),
+                        rs.getDate("donation_date"),
+                        rs.getBigDecimal("amount"));
+            }
+        }
+    }
+
+    public static void updateDonationAmount(Connection conn, int donationId, BigDecimal amount) throws SQLException {
+        String sql = "UPDATE donation SET amount = ? WHERE donation_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, amount);
+            pstmt.setInt(2, donationId);
+            pstmt.executeUpdate();
+            System.out.println("Donation with ID " + donationId + " amount updated successfully!");
+        }
+    }
+}
